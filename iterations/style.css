@@ -1,0 +1,82 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+.bulle {
+    background-color: orange;
+    border-radius: 50%;
+    height: 50px;
+    width: 50px;
+    margin: 10px;
+    position: fixed;
+    display: flex;
+    bottom : 0;
+    right: 0;
+    justify-content: center;
+    align-items: center;
+    padding: 10px;
+}
+
+.bulle > p {
+    color: white;
+    position: relative;
+}
+body{
+    display: flex;
+    flex-direction: column;
+    height: 100vh
+}
+
+.header {
+    background-color: red;
+    height: 30vh 
+}
+
+.Main {
+    background-color: grey;
+    flex-grow: 1;
+    order: 1;
+}
+
+.left {
+    background-color: yellow;
+    flex-grow: 2;
+    order: 1;
+}
+
+.right {
+    background-color: green;
+    flex-grow: 1;
+    order: 3;
+}
+
+.Footer {
+    background-color: blue;
+    height: 20vh 
+
+}
+
+.content{
+    display: flex;
+    flex-direction:  column;
+    flex-grow: 1;
+}
+
+/* Si la largeur de l'écran dépasse , on override */
+@media screen and (min-width: 760px){
+    .content{
+        flex-direction: row;
+    }
+
+    .Main{
+        flex-grow: 2;
+        order: 2
+    }
+
+    .left{
+
+        order: 1;
+    }
+}

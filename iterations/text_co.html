@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ESP32 WebSocket Client</title>
+</head>
+<body>
+    <h1>WebSocket Client</h1>
+    <button onclick="sendMessage()">Envoyer un message à l'ESP32</button>
+    <p id="status"></p>
+
+    <script>
+        // Adresse IP de l'ESP32
+        const ws = new WebSocket('ws://10.1.224.107'); // Remplace par l'adresse IP de ton ESP32
+
+        ws.onopen = function(event) {
+            document.getElementById('status').innerHTML = 'Connecté à l\'ESP32';
+        };
+
+        ws.onmessage = function(event) {
+            console.log('Message reçu: ' + event.data);
+        };
+
+        ws.onclose = function(event) {
+            document.getElementById('status').innerHTML = 'Déconnecté de l\'ESP32';
+        };
+
+        function sendMessage() {
+            ws.send('Bouton pressé');
+        }
+    </script>
+</body>
+</html>

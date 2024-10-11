@@ -1,32 +1,239 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>ESP32 WebSocket Client</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Send a Friend Some Colors</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #E8E8EB;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+        header {
+            font-size: 2rem;
+            margin-top: 20px;
+            text-align: center;
+        }
+        .screen {
+            background-color: #40434E;
+            width: 80%;
+            max-width: 600px;
+            height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 20px;
+            border-radius: 10px;
+        }
+        .material-symbols-outlined {
+            font-size: 5rem;
+            color: #E0DFD5;
+        }
+        .status-message {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+        }
+        .palette {
+            display: flex;
+            align-items: center;
+            margin: 20px;
+        }
+        .color-input {
+            width: 50px;
+            height: 50px;
+            border: none;
+            cursor: pointer;
+            margin-right: 20px;
+        }
+        .send-button, .help-button {
+            padding: 10px 20px;
+            font-size: 1rem;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        .send-button {
+            background-color: #00A6FB;
+            color: white;
+            margin-right: 20px;
+        }
+        .send-button:hover {
+            background-color: #00a7fb8d;
+        }
+        .help-button {
+            background-color: #99582A;
+            color: white;
+            font-size: 1.5rem;
+        }
+        .help-button:hover {
+            background-color: #99582a74;
+        }
+        #log-container {
+            width: 100%;
+            height: 200px;
+            overflow-y: auto;
+            background-color: #f0f0f0;
+            padding: 10px;
+            border: 1px solid #ccc;
+            display: none;
+        }
+        #toggle-log-button {
+            margin-top: 10px;
+            cursor: pointer;
+            padding: 5px 10px;
+            background-color: #00A6FB;
+            color: white;
+            border: none;
+            border-radius: 3px;
+        }
+    </style>
 </head>
 <body>
-    <h1>WebSocket Client</h1>
-    <button onclick="sendMessage()">Envoyer un message à l'ESP32</button>
-    <p id="status"></p>
+    <header>Send a Friend Some Colors</header>
+
+    <div class="screen">
+        <span class="material-symbols-outlined" id="icon">sentiment_satisfied</span>
+    </div>
+    <div class="status-message" id="status-message">La personne est satisfaite</div>
+
+    <button onclick="changeState()">Change State</button>
+
+    <div class="palette">
+        <input type="color" class="color-input" id="colorPicker">
+        <button class="send-button">SEND Color</button>
+        <a href="http://make-everything-ok.com/">
+            <button class="help-button">Need Help?</button>
+        </a>
+    </div>
+
+    <div id="log-container"></div>
+    <button id="toggle-log-button">Show Log</button>
 
     <script>
-        // Adresse IP de l'ESP32
-        const ws = new WebSocket('ws://192.168.1.x:81'); // Remplace par l'adresse IP de ton ESP32
+        let state = 0;
+        let lastSentTime = 0;
+        const MIN_INTERVAL = 100; // Intervalle minimal entre chaque envoi de message (ms)
+        let debounceTimeout;
+        let lastColorSent = '';
 
-        ws.onopen = function(event) {
-            document.getElementById('status').innerHTML = 'Connecté à l\'ESP32';
-        };
-
-        ws.onmessage = function(event) {
-            console.log('Message reçu: ' + event.data);
-        };
-
-        ws.onclose = function(event) {
-            document.getElementById('status').innerHTML = 'Déconnecté de l\'ESP32';
-        };
-
-        function sendMessage() {
-            ws.send('Bouton pressé');
+        function changeState() {
+            const icon = document.getElementById('icon');
+            const statusMessage = document.getElementById('status-message');
+            state = (state) % 3;
+            switch(state) {
+                case 0:
+                    icon.textContent = 'sentiment_satisfied';
+                    statusMessage.textContent = 'La personne est satisfaite';
+                    break;
+                case 1:
+                    icon.textContent = 'sentiment_dissatisfied';
+                    statusMessage.textContent = 'La personne n\'est pas satisfaite';
+                    break;
+                case 2:
+                    icon.textContent = 'question_mark';
+                    statusMessage.textContent = 'En attente de la réponse du client';
+                    break;
+            }
         }
+
+        const domainName = '10.1.224.71'; // Remplacez par votre domaine ou votre service DDNS
+        const socket = new WebSocket(`ws://${domainName}`);
+
+        socket.addEventListener('open', function (event) {
+            console.log('Connected to WebSocket server');
+            logMessage('Connected to WebSocket server');
+        });
+
+        socket.addEventListener('message', function (event) {
+            console.log('Message from server: ', event.data);
+            logMessage('Message from server: ' + event.data);
+            const statusMessage = document.getElementById('status-message');
+            if (event.data.includes('Satisfaction: Yes')) {
+                statusMessage.textContent = 'La personne est satisfait';
+                state = 0;
+                changeState();
+            } else if (event.data.includes('Satisfaction: No')) {
+                statusMessage.textContent = 'La personne n\'est pas satisfaite';
+                state = 1;
+                changeState();
+            } else {
+                statusMessage.textContent = 'En attente de la réponse du client';
+                state = 2;
+                changeState();
+            }
+        });
+
+        document.getElementById('colorPicker').addEventListener('input', function () {
+            const currentTime = Date.now();
+            const statusMessage = document.getElementById('status-message');
+            statusMessage.textContent = 'En attente de la réponse du client';
+            state= 2;
+            changeState();
+            if (currentTime - lastSentTime >= MIN_INTERVAL) {
+                const colorPicker = document.getElementById('colorPicker');
+                const color = colorPicker.value;
+                const r = parseInt(color.substr(1, 2), 16);
+                const g = parseInt(color.substr(3, 2), 16);
+                const b = parseInt(color.substr(5, 2), 16);
+                const rgbMessage = `RGB:${r},${g},${b}`;
+                
+                socket.send(rgbMessage);
+                console.log('Sent RGB message: ', rgbMessage);
+                logMessage('Sent RGB message: ' + rgbMessage);
+                lastSentTime = currentTime;
+                lastColorSent = rgbMessage;
+            }
+
+            // Debounce pour envoyer la couleur finale après 200 ms de non-mouvement
+            clearTimeout(debounceTimeout);
+            debounceTimeout = setTimeout(() => {
+                if (lastColorSent) {
+                    socket.send(lastColorSent);
+                    console.log('Sent final RGB message after 200ms: ', lastColorSent);
+                    logMessage('Sent final RGB message after 200ms: ' + lastColorSent);
+                }
+            }, 200);
+        });
+
+        document.querySelector('.send-button').addEventListener('click', function () {
+            // Envoyer la dernière couleur sélectionnée quand le bouton est cliqué
+            if (lastColorSent) {
+                socket.send(lastColorSent);
+                console.log('Sent final RGB message: ', lastColorSent);
+                logMessage('Sent final RGB message: ' + lastColorSent);
+            } else {
+                console.warn('No color has been selected yet.');
+                logMessage('No color has been selected yet.');
+            }
+        });
+
+        function logMessage(message) {
+            const logContainer = document.getElementById('log-container');
+            const logEntry = document.createElement('div');
+            logEntry.textContent = message;
+            logContainer.appendChild(logEntry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+
+        document.getElementById('toggle-log-button').addEventListener('click', function () {
+            const logContainer = document.getElementById('log-container');
+            if (logContainer.style.display === 'none') {
+                logContainer.style.display = 'block';
+                this.textContent = 'Hide Log';
+            } else {
+                logContainer.style.display = 'none';
+                this.textContent = 'Show Log';
+            }
+        });
     </script>
 </body>
 </html>
